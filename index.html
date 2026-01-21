@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flipperkort</title>
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: white;
+        overflow: hidden;
+        cursor: none; 
+        position: relative;
+    }
+
+    /* Bakgrundsbilden som studsar */
+    #bouncing-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 600px; /* Ändra storlek här */
+        height: auto;
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    .flipbook {
+        margin: auto;
+        width: 90vw;
+        height: calc(90vw / 1.414);
+        max-width: 1000px;
+        max-height: 90vh;
+        cursor: none;
+        position: relative;
+        z-index: 1;
+    }
+
+    .turn-shadow {
+        display: none !important;
+    }
+
+    .flipbook img {
+        width: 100%;
+        height: 100%;
+        object-fit: fill;
+        display: block;
+    }
+
+    #custom-cursor {
+        position: fixed;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+        z-index: 9999;
+        display: none;
+        width: 80px;  
+        height: auto;
+        transform: translate(-50%, -50%);
+    }
+</style>
+</head>
+<body>
+
+<img src="musen.png" id="custom-cursor" alt="Cursor">
+<img src="flyflag.png" id="bouncing-image" alt="Bouncing Image"> 
+
+<div class="flipbook">
+    <div class="hard"><img src="grattis-kunggen1.jpg" alt="Framsida"></div>
+    <div><img src="grattis-kungen2.jpg" alt="Sida 2"></div>
+    <div><img src="grattis-kungen3.jpg" alt="Sida 3"></div>
+</div>
+
+<div id="player"></div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="turn (1).js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+var player;
+var userInteracted = false;
+var playerReady = false;
+
+// VARIABLER FÖR STUDSEFFEKT
+var bouncingImage = $('#bouncing-image');
+var speedX = 0.8; // ÄNDRA HASTIGHET HÄR (lägre = långsammare)
+var speedY = 0.8; 
+var posX = 0; // Startar i vänster hörn
+var posY = 0; // Startar i topp
+
+function onYouTubeIframeAPIReady() {
+    player = new YT.Player('player', {
+        height: '0',
+        width: '0',
+        videoId: 'di18hTFTwIw', 
+        playerVars: {
+            'autoplay': 0,
+            'controls': 0,
+            'mute': 0
+        },
+        events: {
+            'onReady': function() { playerReady = true; }
+        }
+    });
+}
+
+function animateBouncingImage() {
+    var screenWidth = $(window).width();
+    var screenHeight = $(window).height();
+    var imageWidth = bouncingImage.width();
+    var imageHeight = bouncingImage.height();
+
+    posX += speedX;
+    posY += speedY;
+
+    // Studsa vid höger/vänster vägg
+    if (posX + imageWidth >= screenWidth || posX <= 0) {
+        speedX *= -1;
+    }
+    // Studsa vid golv/tak
+    if (posY + imageHeight >= screenHeight || posY <= 0) {
+        speedY *= -1;
+    }
+
+    bouncingImage.css({ left: posX + 'px', top: posY + 'px' });
+
+    requestAnimationFrame(animateBouncingImage);
+}
+
+
+$(document).ready(function() {
+    var book = $(".flipbook");
+    var cursor = $("#custom-cursor");
+
+    $(document).on('mousemove', function(e) {
+        cursor.show();
+        cursor.css({ left: e.clientX + 'px', top: e.clientY + 'px' });
+    });
+
+    book.turn({
+        acceleration: true,
+        gradients: true, 
+        duration: 1000,
+        display: 'double'
+    });
+
+    $(document).one("mousedown touchstart", function() {
+        userInteracted = true;
+    });
+
+    book.bind("turning", function(event, page, view) {
+        if (page > 1 && userInteracted && playerReady) {
+            player.playVideo();
+        } else if (page === 1 && playerReady) {
+            player.pauseVideo();
+        }
+    });
+
+    $(window).resize(function() {
+        var w = $(window).width() * 0.9;
+        if (w > 1000) w = 1000;
+        var h = w / 1.414;
+        
+        if (h > $(window).height() * 0.9) {
+            h = $(window).height() * 0.9;
+            w = h * 1.414;
+        }
+        book.turn("size", w, h);
+        
+        // Återställ position vid fönsterändring så den inte hamnar utanför
+        posX = 0;
+        posY = 0;
+    });
+
+    // Starta den långsamma animationen
+    animateBouncingImage();
+});
+</script>
+
+</body>
+</html>
